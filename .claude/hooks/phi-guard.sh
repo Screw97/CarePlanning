@@ -23,7 +23,8 @@ if echo "$CMD" | grep -Eq 'git[[:space:]]+(add|commit)'; then
   echo "$CMD" | grep -Eiq '\.(sql|dump|sqlite3?|db)\b'            && block "staging a database dump/cache. May contain real health data."
   echo "$CMD" | grep -Eiq '\.(csv|pdf|xlsx?|json)\b.*export|export.*\.(csv|pdf|xlsx?|json)\b' && block "staging an export. Real-data exports must not be committed."
   # `git add .`, `git add -A`, `git add --all` sweep up everything — force explicit paths.
-  echo "$CMD" | grep -Eq 'git[[:space:]]+add[[:space:]]+(\.|-A\b|--all\b|\*)' && block "broad 'git add' can sweep in .env/exports/dumps. Add specific files."
+  # `.` must be a complete argument (so `git add .claude/foo` and `git add ./src` are fine).
+  echo "$CMD" | grep -Eq 'git[[:space:]]+add[[:space:]]+(\.[[:space:]]|\.$|-A\b|--all\b|[[:space:]]\*)' && block "broad 'git add' can sweep in .env/exports/dumps. Add specific files."
 fi
 
 # Block obvious exfiltration of local data to the network.

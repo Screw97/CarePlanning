@@ -7,7 +7,10 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
 git fetch origin "$BRANCH" --quiet 2>/dev/null || true
 
 # Warn loudly if any sensitive artifact is tracked — it should never be.
-TRACKED_RISK=$(git ls-files 2>/dev/null | grep -Ei '(^|/)\.env|\.(sqlite3?|db|dump)$|export.*\.(csv|pdf|xlsx?)$' || true)
+# (.env.example is a safe template and is intentionally excluded.)
+TRACKED_RISK=$(git ls-files 2>/dev/null \
+  | grep -Ei '(^|/)\.env|\.(sqlite3?|db|dump)$|export.*\.(csv|pdf|xlsx?)$' \
+  | grep -Ev '\.env\.example$' || true)
 
 cat <<BANNER
 CarePlanning — care/health data. Safety rules in effect:
