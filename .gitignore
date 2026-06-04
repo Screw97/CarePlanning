@@ -1,0 +1,33 @@
+# Secrets & config — never commit
+.env
+.env.*
+!.env.example
+
+# Health data / PHI — never commit real data
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+/exports/
+*export*.csv
+*export*.pdf
+*export*.xlsx
+
+# Expo / RN
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
