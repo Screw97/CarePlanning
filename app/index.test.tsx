@@ -1,8 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 
-import CalendarChecklistScreen from './index';
+import Root from './index';
 
-// Make safe-area-context a no-op wrapper (no provider needed in tests).
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -14,52 +13,64 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-// Drive the screen from a controlled data layer.
-jest.mock('@/lib/careTasks', () => {
-  const item = {
-    task: {
-      id: 't1',
-      user_id: 'u',
-      title: 'Brush teeth',
-      category: 'hygiene',
-      recurrence_type: 'daily',
-      due_date: null,
-      weekdays: null,
-      time_of_day: 'morning',
-      sort_order: 10,
-      archived_at: null,
-      created_at: '2026-01-01T00:00:00.000Z',
-    },
-    log: null,
-    status: null,
-  };
-  return {
-    __item: item,
-    isSupabaseConfigured: false,
-    loadChecklist: jest.fn(async () => [item]),
-    hasAnyTasks: jest.fn(async () => true),
-    syncFromServer: jest.fn(async () => ({ synced: false })),
-    toggleStatus: jest.fn(async () => ({ synced: false })),
-    addTask: jest.fn(async () => item.task),
-    addStarterTasks: jest.fn(async () => undefined),
-  };
+// Signed in immediately.
+jest.mock('@/lib/auth', () => ({
+  subscribeAuth: (cb: (id: string | null) => void) => {
+    cb('user-1');
+    return () => {};
+  },
+  signOut: jest.fn(),
+}));
+
+jest.mock('@/lib/tracker', () => ({
+  isSupabaseConfigured: true,
+  syncFromServer: jest.fn(async () => ({ synced: false })),
+  toggleMedTaken: jest.fn(async () => ({ synced: false })),
+  setSymptom: jest.fn(async () => ({ synced: false })),
+  clearSymptom: jest.fn(async () => ({ synced: false })),
+  setDayNote: jest.fn(async () => ({ synced: false })),
+  loadContacts: jest.fn(async () => []),
+  loadReference: jest.fn(async () => ({ good: [], avoid: [], watch: [] })),
+  loadDay: jest.fn(async () => ({
+    medGroups: [
+      {
+        block: 'morning',
+        label: 'Morning — with breakfast',
+        items: [
+          {
+            med: {
+              id: 'm1',
+              user_id: 'u',
+              name: 'Med A 550mg',
+              dose: 'antibiotic',
+              block: 'morning',
+              tag: null,
+              note: null,
+              sort_order: 10,
+              active: true,
+              created_at: '2026-01-01T00:00:00.000Z',
+            },
+            status: null,
+          },
+        ],
+      },
+    ],
+    progress: { done: 0, total: 1 },
+    symptoms: [],
+    note: '',
+  })),
+}));
+
+import * as tracker from '@/lib/tracker';
+
+it('shows a signed-in user their medication as an accessible checkbox', async () => {
+  render(<Root />);
+  expect(await screen.findByRole('checkbox', { name: /Med A 550mg/i })).toBeTruthy();
 });
 
-import * as careTasks from '@/lib/careTasks';
-
-it('renders due tasks as accessible checkboxes', async () => {
-  render(<CalendarChecklistScreen />);
-  expect(await screen.findByRole('checkbox', { name: /Brush teeth/i })).toBeTruthy();
-});
-
-it('shows the on-device banner when Supabase is not configured', async () => {
-  render(<CalendarChecklistScreen />);
-  expect(await screen.findByText(/Saved on this device/i)).toBeTruthy();
-});
-
-it('toggling a task calls the data layer', async () => {
-  render(<CalendarChecklistScreen />);
-  const checkbox = await screen.findByRole('checkbox', { name: /Brush teeth/i });
-  fireEvent.press(checkbox);
-  await waitFor(() => expect(careTasks.toggleStatus).toHaveBeenCalled());
+it('toggling a medication calls the data layer', async () => {
+  render(<Root />);
+  const cb = await screen.findByRole('checkbox', { name: /Med A 550mg/i });
+  fireEvent.press(cb);
+  await waitFor(() => expect(tracker.toggleMedTaken).toHaveBeenCalledWith('m1', expect.any(String)));
 });
